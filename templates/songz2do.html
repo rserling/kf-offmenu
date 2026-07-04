@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ErikNerd Song Requests</title>
+</head>
+<body>
+  <p style="font-family:Arial;font-size:36pt;font-weight:bold;">ErikNerd Song Requests</p>
+  <form method="POST" action="/song-requests/">
+    <select name="name" id="singer" required onchange="setSinger(this.value)">
+      <option value="">Singer Name</option>
+      {% for n in names %}
+      <option value="{{ n }}">{{ n }}</option>
+      {% endfor %}
+    </select><br><br>
+    <input type="text" name="artist" placeholder="Artist" required><br><br>
+    <input type="text" name="title" placeholder="Title" required><br><br>
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+    var currentSinger = "";
+    function setSinger(val) { currentSinger = val; updateDelete(); }
+    function updateDelete() {
+      document.querySelectorAll(".del-btn").forEach(function(btn) {
+        btn.style.visibility = (currentSinger && btn.dataset.singer === currentSinger) ? "visible" : "hidden";
+      });
+    }
+  </script>
+
+  {% if songs %}
+  <br>
+  <table style="border-collapse:collapse;font-family:Courier,monospace;">
+    <tr>
+      <th style="font-family:Arial;border:1px solid black;padding:4px;">Artist</th>
+      <th style="font-family:Arial;border:1px solid black;padding:4px;">Title</th>
+      <th style="font-family:Arial;border:1px solid black;padding:4px;">Singer</th>
+      <th style="font-family:Arial;border:1px solid black;padding:4px;"></th>
+    </tr>
+    {% for name, artist, title in songs %}
+    <tr>
+      <td style="border:1px solid black;padding:4px;">{{ artist }}</td>
+      <td style="border:1px solid black;padding:4px;">{{ title }}</td>
+      <td style="border:1px solid black;padding:4px;">{{ name }}</td>
+      <td style="border:1px solid black;padding:4px;text-align:center;">
+        <form method="POST" action="/song-requests/delete" style="margin:0;">
+          <input type="hidden" name="idx" value="{{ loop.index0 }}">
+          <button type="submit" class="del-btn" data-singer="{{ name }}" style="background:none;border:none;color:red;cursor:pointer;font-size:1em;visibility:hidden;">✕</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+<p style="font-family:Arial"><a href="https://docs.google.com/spreadsheets/d/1P_bYUH3_G0U9BHfLenUMP6jnlUqYctFgUZOd-6hzt1o/edit?usp=sharing">Master Spreadsheet in Google Sheets</a>
+</body>
+</html>
