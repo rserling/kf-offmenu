@@ -6,7 +6,7 @@ app.config["APPLICATION_ROOT"] = "/song-requests"  # add this
 
 SONG_FILE = "requested-songz.txt"
 
-NAMES = ["Jim", "Rad John", "Sammy G", "Zeb", "ErikNerd"]  # update as needed
+NAMES = ["Jim", "Rad John", "Sammy G", "Taylor F", "Zeb", "ErikNerd"]  # update as needed
 
 def load_songs():
     if not os.path.exists(SONG_FILE):

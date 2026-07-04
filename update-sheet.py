@@ -10,7 +10,7 @@ SOURCE_PATH = "/Users/elyons/Google Drive/My Drive/othertrax/"
 SHEET_ID = "1P_bYUH3_G0U9BHfLenUMP6jnlUqYctFgUZOd-6hzt1o"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 TOKEN_FILE = "token.pickle"
-CREDS_FILE = "credentials.json"
+CREDS_FILE = "/Users/elyons/projects/kf-offmenu/credentials.json"
 
 logging.basicConfig(
     filename="/var/tmp/kf-offmenu.log",
