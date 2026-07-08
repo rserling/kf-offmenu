@@ -6,11 +6,11 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-SOURCE_PATH = "/Users/elyons/Google Drive/My Drive/othertrax/"
+SOURCE_PATH = "/home/etl4tech_gmail_com/google-drive/othertrax/"
 SHEET_ID = "1P_bYUH3_G0U9BHfLenUMP6jnlUqYctFgUZOd-6hzt1o"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 TOKEN_FILE = "token.pickle"
-CREDS_FILE = "/Users/elyons/projects/kf-offmenu/credentials.json"
+CREDS_FILE = "/home/etl4tech_gmail_com/projects/kf-offmenu/credentials.json"
 
 logging.basicConfig(
     filename="/var/tmp/kf-offmenu.log",
@@ -52,13 +52,16 @@ def update_sheet(rows):
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=SHEET_ID, range="A:A").execute()
     before = len(result.get("values", []))
+    after = len(rows)
+    if(before == after):
+        logging.info(f"No change in row count, exiting")
+        return 1
     sheet.values().update(
         spreadsheetId=SHEET_ID,
         range="A1",
         valueInputOption="RAW",
         body={"values": rows},
     ).execute()
-    after = len(rows)
     logging.info(f"Updated sheet: {before} -> {after} records (change: {after - before:+d})")
 
 
