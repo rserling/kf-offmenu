@@ -6,11 +6,11 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-SOURCE_PATH = "/Users/elyons/Google Drive/My Drive/othertrax/"
+SOURCE_PATH = "/home/etl4tech_gmail_com/google-drive/othertrax"
 SHEET_ID = "1P_bYUH3_G0U9BHfLenUMP6jnlUqYctFgUZOd-6hzt1o"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-TOKEN_FILE = "token.pickle"
-CREDS_FILE = "/Users/elyons/projects/kf-offmenu/credentials.json"
+TOKEN_FILE = "/home/etl4tech_gmail_com/projects/kf-offmenu/token.pickle"
+CREDS_FILE = "/home/etl4tech_gmail_com/projects/kf-offmenu/credentials.json"
 
 logging.basicConfig(
     filename="/var/tmp/kf-offmenu.log",
@@ -19,7 +19,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-
 def get_creds():
     creds = None
     if os.path.exists(TOKEN_FILE):
@@ -27,14 +26,17 @@ def get_creds():
             creds = pickle.load(f)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except Exception:
+                os.remove(TOKEN_FILE)
+                creds = None
+        if not creds:
             flow = InstalledAppFlow.from_client_secrets_file(CREDS_FILE, SCOPES)
             creds = flow.run_local_server(port=0)
         with open(TOKEN_FILE, "wb") as f:
             pickle.dump(creds, f)
     return creds
-
 
 def list_tracks():
     rows = []
@@ -45,7 +47,6 @@ def list_tracks():
             artist, title = (parts[0], parts[1]) if len(parts) == 2 else (parts[0], "")
             rows.append([artist, title])
     return rows
-
 
 def update_sheet(rows):
     service = build("sheets", "v4", credentials=get_creds())
@@ -60,7 +61,6 @@ def update_sheet(rows):
     ).execute()
     after = len(rows)
     logging.info(f"Updated sheet: {before} -> {after} records (change: {after - before:+d})")
-
 
 if __name__ == "__main__":
     try:
