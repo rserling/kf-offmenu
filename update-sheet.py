@@ -73,8 +73,14 @@ if __name__ == "__main__":
     try:
         rows = list_tracks()
         if args.test:
-            for row in rows:
-                print(row)
+            service = build("sheets", "v4", credentials=get_creds())
+            result = service.spreadsheets().values().get(spreadsheetId=SHEET_ID, range="A:A").execute()
+            before = len(result.get("values", []))
+            after = len(rows)
+            if before == after:
+                print(f"No change in row count, would exit")
+            else:
+                print(f"Would update sheet: {before} -> {after} records (change: {after - before:+d})")
         else:
             update_sheet(rows)
     except Exception as e:
