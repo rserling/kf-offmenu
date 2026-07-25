@@ -19,7 +19,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-
 def get_creds():
     creds = None
     if os.path.exists(TOKEN_FILE):
@@ -27,14 +26,17 @@ def get_creds():
             creds = pickle.load(f)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except Exception:
+                os.remove(TOKEN_FILE)
+                creds = None
+        if not creds:
             flow = InstalledAppFlow.from_client_secrets_file(CREDS_FILE, SCOPES)
             creds = flow.run_local_server(port=0)
         with open(TOKEN_FILE, "wb") as f:
             pickle.dump(creds, f)
     return creds
-
 
 def list_tracks():
     rows = []
@@ -45,7 +47,6 @@ def list_tracks():
             artist, title = (parts[0], parts[1]) if len(parts) == 2 else (parts[0], "")
             rows.append([artist, title])
     return rows
-
 
 def update_sheet(rows):
     service = build("sheets", "v4", credentials=get_creds())
@@ -64,9 +65,17 @@ def update_sheet(rows):
     ).execute()
     logging.info(f"Updated sheet: {before} -> {after} records (change: {after - before:+d})")
 
-
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--test", action="store_true")
+    args = parser.parse_args()
     try:
-        update_sheet(list_tracks())
+        rows = list_tracks()
+        if args.test:
+            for row in rows:
+                print(row)
+        else:
+            update_sheet(rows)
     except Exception as e:
         logging.error(f"Failed: {e}")
