@@ -6,7 +6,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-SOURCE_PATH = "/home/etl4tech_gmail_com/google-drive/othertrax"
+SOURCE_PATH = "/home/etl4tech_gmail_com/google-drive/othertrax/"
 SHEET_ID = "1P_bYUH3_G0U9BHfLenUMP6jnlUqYctFgUZOd-6hzt1o"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 TOKEN_FILE = "/home/etl4tech_gmail_com/projects/kf-offmenu/token.pickle"
@@ -53,17 +53,29 @@ def update_sheet(rows):
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=SHEET_ID, range="A:A").execute()
     before = len(result.get("values", []))
+    after = len(rows)
+    if(before == after):
+        logging.info(f"No change in row count, exiting")
+        return 1
     sheet.values().update(
         spreadsheetId=SHEET_ID,
         range="A1",
         valueInputOption="RAW",
         body={"values": rows},
     ).execute()
-    after = len(rows)
     logging.info(f"Updated sheet: {before} -> {after} records (change: {after - before:+d})")
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--test", action="store_true")
+    args = parser.parse_args()
     try:
-        update_sheet(list_tracks())
+        rows = list_tracks()
+        if args.test:
+            for row in rows:
+                print(row)
+        else:
+            update_sheet(rows)
     except Exception as e:
         logging.error(f"Failed: {e}")
