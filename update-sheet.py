@@ -9,7 +9,7 @@ from googleapiclient.discovery import build
 SOURCE_PATH = "/home/etl4tech_gmail_com/google-drive/othertrax/"
 SHEET_ID = "1P_bYUH3_G0U9BHfLenUMP6jnlUqYctFgUZOd-6hzt1o"
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-TOKEN_FILE = "token.pickle"
+TOKEN_FILE = "/home/etl4tech_gmail_com/projects/kf-offmenu/token.pickle"
 CREDS_FILE = "/home/etl4tech_gmail_com/projects/kf-offmenu/credentials.json"
 
 logging.basicConfig(
