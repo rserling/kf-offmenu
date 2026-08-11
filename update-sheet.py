@@ -78,7 +78,15 @@ if __name__ == "__main__":
     try:
         rows = list_tracks()
         if args.test:
-            print(f"Would write {len(rows)} tracks to {OUTPUT_FILE}")
+            before = 0
+            if os.path.exists(OUTPUT_FILE):
+                with open(OUTPUT_FILE) as f:
+                    before = f.read().count("<tr>") - 1  # subtract header row
+            after = len(rows)
+            if before == after:
+                print(f"No change in row count ({after} tracks)")
+            else:
+                print(f"Would write {after} tracks to {OUTPUT_FILE} (change: {after - before:+d})")
         else:
             write_html(rows)
     except Exception as e:
