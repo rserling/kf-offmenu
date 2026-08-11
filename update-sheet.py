@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 import os
-import pickle
 import logging
-from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+from datetime import datetime
 
 SOURCE_PATH = "/home/etl4tech_gmail_com/google-drive/othertrax/"
-SHEET_ID = "1P_bYUH3_G0U9BHfLenUMP6jnlUqYctFgUZOd-6hzt1o"
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-TOKEN_FILE = "/home/etl4tech_gmail_com/projects/kf-offmenu/token.pickle"
-CREDS_FILE = "/home/etl4tech_gmail_com/projects/kf-offmenu/credentials.json"
+OUTPUT_FILE = "/var/www/html/othertrax.html"
 
 logging.basicConfig(
     filename="/var/tmp/kf-offmenu.log",
@@ -18,52 +12,63 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
 
-def get_creds():
-    creds = None
-    if os.path.exists(TOKEN_FILE):
-        with open(TOKEN_FILE, "rb") as f:
-            creds = pickle.load(f)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-            except Exception:
-                os.remove(TOKEN_FILE)
-                creds = None
-        if not creds:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDS_FILE, SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open(TOKEN_FILE, "wb") as f:
-            pickle.dump(creds, f)
-    return creds
 
 def list_tracks():
     rows = []
     for fname in sorted(os.listdir(SOURCE_PATH)):
         if fname.endswith(".mp4"):
+            mtime = os.path.getmtime(os.path.join(SOURCE_PATH, fname))
             name = fname[:-4]
             parts = name.split(" - ", 1)
             artist, title = (parts[0], parts[1]) if len(parts) == 2 else (parts[0], "")
-            rows.append([artist, title])
+            rows.append((mtime, artist, title))
     return rows
 
-def update_sheet(rows):
-    service = build("sheets", "v4", credentials=get_creds())
-    sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=SHEET_ID, range="A:A").execute()
-    before = len(result.get("values", []))
-    after = len(rows)
-    if(before == after):
-        logging.info(f"No change in row count, exiting")
-        return 1
-    sheet.values().update(
-        spreadsheetId=SHEET_ID,
-        range="A1",
-        valueInputOption="RAW",
-        body={"values": rows},
-    ).execute()
-    logging.info(f"Updated sheet: {before} -> {after} records (change: {after - before:+d})")
+
+def write_html(rows):
+    rows_newest_first = sorted(rows, key=lambda r: r[0], reverse=True)
+    rows_html = ""
+    for mtime, artist, title in rows_newest_first:
+        date_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+        rows_html += f'  <tr><td>{artist}</td><td>{title}</td><td>{date_str}</td></tr>\n'
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <title>Othertrax</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; }}
+    table {{ border-collapse: collapse; }}
+    th, td {{ border: 1px solid #ccc; padding: 6px 12px; }}
+    th {{ cursor: pointer; background: #eee; }}
+  </style>
+</head>
+<body>
+  <h2>Othertrax</h2>
+  <p>Sort by: <a href="?sort=date">Newest First</a> | <a href="?sort=artist">Artist A-Z</a></p>
+  <table id="tracks">
+    <thead><tr><th>Artist</th><th>Title</th><th>Added</th></tr></thead>
+    <tbody>
+{rows_html}    </tbody>
+  </table>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sort') === 'artist') {{
+      const tbody = document.querySelector('#tracks tbody');
+      Array.from(tbody.rows)
+        .sort((a, b) => a.cells[0].textContent.localeCompare(b.cells[0].textContent))
+        .forEach(r => tbody.appendChild(r));
+    }}
+  </script>
+</body>
+</html>"""
+
+    with open(OUTPUT_FILE, "w") as f:
+        f.write(html)
+    logging.info(f"Wrote {len(rows)} tracks to {OUTPUT_FILE}")
+
 
 if __name__ == "__main__":
     import argparse
@@ -73,15 +78,8 @@ if __name__ == "__main__":
     try:
         rows = list_tracks()
         if args.test:
-            service = build("sheets", "v4", credentials=get_creds())
-            result = service.spreadsheets().values().get(spreadsheetId=SHEET_ID, range="A:A").execute()
-            before = len(result.get("values", []))
-            after = len(rows)
-            if before == after:
-                print(f"No change in row count, would exit")
-            else:
-                print(f"Would update sheet: {before} -> {after} records (change: {after - before:+d})")
+            print(f"Would write {len(rows)} tracks to {OUTPUT_FILE}")
         else:
-            update_sheet(rows)
+            write_html(rows)
     except Exception as e:
         logging.error(f"Failed: {e}")
